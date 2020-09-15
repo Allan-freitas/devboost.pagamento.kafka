@@ -26,6 +26,7 @@ Projeto do curso DevBoost - Itaú
 - Repository
 - BDD
 - TDD
+- Kafka
 
 ## Desenvolvedores
 
