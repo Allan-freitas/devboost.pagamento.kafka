@@ -18,15 +18,15 @@ namespace Domain.Pay.Services.CommandHandlers
     {
         readonly IUnitOfWork _unitOfWork;
         readonly IMapper _mapper;
-        readonly IPayAtOperatorService _payAtOperatorService;
-        readonly IWebHook _webHook;
+        readonly IPayAtOperatorService _payAtOperatorService;        
+        readonly ISendPaymentKafka _sendPayToKafka;
 
-        public CriarPaymentHandler(IUnitOfWork unitOfWork, IMapper mapper, IWebHook webHook, IPayAtOperatorService payAtOperatorService)
+        public CriarPaymentHandler(IUnitOfWork unitOfWork, IMapper mapper, IPayAtOperatorService payAtOperatorService, ISendPaymentKafka sendPayToKafka)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _payAtOperatorService = payAtOperatorService;
-            _webHook = webHook;
+            _payAtOperatorService = payAtOperatorService;            
+            _sendPayToKafka = sendPayToKafka;
         }
 
         public async Task<ResponseResult> Handle(CriarPaymentCommand request)
@@ -39,7 +39,7 @@ namespace Domain.Pay.Services.CommandHandlers
             await CallMockApi(request);
             // Chama  WebHook retornando o status do pagamento
             request.Status = 2;
-            await CallWebHook(request);
+            await SendPaymentToKafka(request);
             // retorna a operação para Controller
             return _response;
         }
@@ -79,9 +79,9 @@ namespace Domain.Pay.Services.CommandHandlers
             });
         }
 
-        async Task CallWebHook(CriarPaymentCommand request)
+        async Task SendPaymentToKafka(CriarPaymentCommand request)
         {
-            var result = await _webHook.CallPostMethod(new WebHookMethodRequestDto
+            var requestPaymentDto = new RequestPaymentDto
             {
                 PayId = request.PayId,
                 CreatedAt = request.CreatedAt,
@@ -92,10 +92,11 @@ namespace Domain.Pay.Services.CommandHandlers
                 CodigoSeguranca = request.CodigoSeguranca,
                 Valor = (decimal)request.Valor,
                 Status = request.Status
-            });
-            if (result.StatusCode != HttpStatusCode.OK)
+            };
+            var result = await _sendPayToKafka.SendPay(requestPaymentDto);
+            if (result.Status == Confluent.Kafka.PersistenceStatus.NotPersisted)
             {
-                request.AddNotification("", result.ContentResult);
+                request.AddNotification("", result.Message.Value);
                 _response.AddNotifications(request.Notifications);
             }
         }
