@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Consumer.Drone.AzureFunction\Consumer.Drone.AzureFunction.csproj" />
     <ProjectReference Include="..\Domain.Pay.Services\Domain.Pay.Services.csproj" />
     <ProjectReference Include="..\Domain.Pay\Domain.Pay.csproj" />
     <ProjectReference Include="..\Integration.Pay\Integration.Pay.csproj" />
